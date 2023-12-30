@@ -1,1 +1,1 @@
-# bookstore-management
+# bookshop-mobileapi

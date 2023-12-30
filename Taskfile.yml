@@ -1,0 +1,86 @@
+version: '3'
+
+dotenv: [".env", ".testenv"]
+
+tasks:
+  network:
+    desc: Create a Docker network for the bank application
+    cmds:
+      - docker network create bank-network
+
+  createdb:
+    desc: Create a PostgreSQL database for the bank application
+    cmds:
+      - docker exec -it postgres createdb --username=root --owner=root simple_bank
+
+  dropdb:
+    desc: Drop the PostgreSQL database for the bank application
+    cmds:
+      - docker exec -it postgres dropdb simple_bank
+
+  migrateup:
+    desc: Run database migrations (up)
+    cmds:
+      - migrate -path db/migrations -database "$DB_URI" -verbose up
+
+  migrateup1:
+    desc: Run the first database migration (up)
+    cmds:
+      - migrate -path db/migration -database "$DB_URI" -verbose up 1
+
+  migratedown:
+    desc: Rollback database migrations (down)
+    cmds:
+      - migrate -path db/migrations -database "$(DB_URI)" -verbose down
+
+  migratedown1:
+    desc: Rollback the first database migration (down)
+    cmds:
+      - migrate -path db/migration -database "$DB_URI" -verbose down 1
+
+  new_schema:
+    desc: Create a new database migration
+    cmds:
+      - migrate create -ext sql -dir db/migrations -seq {{.name}}
+
+  db_docs:
+    desc: Build database documentation
+    cmds:
+      - dbdocs build doc/db.dbml
+
+  db_schema:
+    desc: Generate SQL schema from DBML
+    cmds:
+      - dbml2sql --postgres -o doc/schema.sql doc/db.dbml
+
+  sqlc:
+    desc: Generate SQLC code
+    cmds:
+      - sqlc generate
+
+  test:
+    desc: Run tests for the bank application
+    cmds:
+      - go test -v -cover -short ./...
+
+  server:
+    desc: Run the bank application server
+    cmds:
+      - go run main.go
+
+  mock:
+    desc: Generate mock files for database and worker
+    cmds:
+      - mockgen -package mockdb -destination db/mock/store.go github.com/techschool/simplebank/db/sqlc Store
+      - mockgen -package mockwk -destination worker/mock/distributor.go github.com/techschool/simplebank/worker TaskDistributor
+
+  evans:
+    desc: Start Evans gRPC client
+    cmds:
+      - evans --host localhost --port 9090 -r repl
+
+  redis:
+    desc: Start a Redis container
+    cmds:
+      - docker run --name redis -p 6379:6379 -d redis:7-alpine
+

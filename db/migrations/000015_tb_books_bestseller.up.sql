@@ -1,0 +1,1 @@
+ALTER TABLE "books" ADD bestseller boolean DEFAULT false;
